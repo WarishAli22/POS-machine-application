@@ -41,6 +41,8 @@ dependencies:
   open_file: ^3.5.10
   file_saver: ^0.2.14
   share_plus: ^10.1.2
+  table_calendar: ^3.0.9
+  intl: ^0.18.1
 
 dev_dependencies:
   flutter_launcher_icons: "^0.14.4"

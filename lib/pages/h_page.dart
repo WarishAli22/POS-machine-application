@@ -35,14 +35,15 @@ class HomeScreen extends StatelessWidget {
 
     return Consumer<TicketProvider>(
         builder: (context, ticketProvider, child){
-          int activeTicketIndex = ticketProvider.getActiveTicketIndex();
+          String? activeTicketName = ticketProvider.activeTicket?.name;
+          int activeTicketNum = ticketProvider.getActiveTicketIndex();
           return Scaffold(
             appBar: AppBar(
               titleSpacing: 0,
               title: Row(
                 children: [
                   const SizedBox(width: 8),
-                  TicketPill(ticketnum: activeTicketIndex),
+                  TicketPill(ticketname: activeTicketName!, ticketnum: activeTicketNum),
                 ],
               ),
               actions: [
@@ -130,6 +131,11 @@ class HomeScreen extends StatelessWidget {
                     child: const Text("Check state of provider")),
                 ElevatedButton(
                     onPressed: (){
+                      print(ticketProvider.clearAllTickets);
+                    },
+                    child: const Text("Remove all tickets")),
+                ElevatedButton(
+                    onPressed: (){
                       if(ticketProvider.activeTicket?.totalAmount == null){
                         print("total amount is null");
                       }
@@ -151,7 +157,7 @@ class HomeScreen extends StatelessWidget {
       builder: (BuildContext context) {
         return SizedBox(
           height: MediaQuery.of(context).size.height * 0.8,
-          child: const TicketsDrawer(),
+          child: TicketsDrawer(),
         );
       },
     );

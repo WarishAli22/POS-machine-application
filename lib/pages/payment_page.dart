@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:my_pos/pages/h_page.dart';
 import 'package:my_pos/pages/print_page.dart';
 import 'package:my_pos/providers/ticket_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:my_pos/models/ticket_model.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class PaymentPage extends StatelessWidget {
   final Ticket ticket;
@@ -12,60 +16,246 @@ class PaymentPage extends StatelessWidget {
     required this.ticket,
   }) : super(key: key);
 
+  // Method to get the SD card directory
+  // Future<Directory?> getSdCardDirectory() async {
+  //   try {
+  //     // For Android devices, external storage directories usually include SD card
+  //     final List<Directory>? externalDirs = await getExternalStorageDirectories();
+  //
+  //     if (externalDirs != null && externalDirs.length > 1) {
+  //       // Typically, the second directory is the SD card
+  //       return externalDirs.length > 1 ? externalDirs[1] : externalDirs.first;
+  //     } else {
+  //       // Fallback to external storage directory
+  //       return await getExternalStorageDirectory();
+  //     }
+  //   } catch (e) {
+  //     print('Error getting SD card directory: $e');
+  //     return await getExternalStorageDirectory();
+  //   }
+  // }
+
+  Future<Directory> getStorageDirectory() async {
+    try {
+      // For Android 10+ (API 29+), use getApplicationDocumentsDirectory
+      final Directory appDocumentsDir = await getApplicationDocumentsDirectory();
+
+      // Create a subdirectory for tickets within the app's private storage
+      final Directory ticketsDir = Directory('${appDocumentsDir.path}/tickets');
+
+      if (!await ticketsDir.exists()) {
+        await ticketsDir.create(recursive: true);
+      }
+
+      print('📁 Using storage directory: ${ticketsDir.path}');
+      return ticketsDir;
+    } catch (e) {
+      print('Error getting storage directory: $e');
+      // Fallback to temporary directory
+      final Directory tempDir = await getTemporaryDirectory();
+      final Directory fallbackDir = Directory('${tempDir.path}/tickets');
+      if (!await fallbackDir.exists()) {
+        await fallbackDir.create(recursive: true);
+      }
+      return fallbackDir;
+    }
+  }
+
+  // Method to save ticket data locally
+  // Future<void> saveTicketLocally(Ticket completedTicket) async {
+  //   try {
+  //     final Directory? directory = await getSdCardDirectory();
+  //
+  //     if (directory == null) {
+  //       print('Could not access storage directory');
+  //       return;
+  //     }
+  //
+  //     // Create a tickets directory if it doesn't exist
+  //     final ticketsDir = Directory('${directory.path}/tickets');
+  //     if (!await ticketsDir.exists()) {
+  //       await ticketsDir.create(recursive: true);
+  //     }
+  //
+  //     // Generate a unique filename using timestamp
+  //     final timestamp = DateTime.now().millisecondsSinceEpoch;
+  //     final file = File('${ticketsDir.path}/ticket_${completedTicket.id}_$timestamp.json');
+  //
+  //     // Convert ticket to JSON and save using your existing toMap() method
+  //     final ticketData = {
+  //       'ticket': completedTicket.toMap(),
+  //       'savedTimestamp': DateTime.now().millisecondsSinceEpoch,
+  //       'totalAmount': completedTicket.totalAmount,
+  //     };
+  //
+  //     final jsonString = jsonEncode(ticketData);
+  //
+  //     await file.writeAsString(jsonString);
+  //     print('Ticket saved successfully at: ${file.path}');
+  //   } catch (e) {
+  //     print('Error saving ticket locally: $e');
+  //   }
+  // }
+
+  Future<void> saveTicketLocally(Ticket completedTicket) async {
+    try {
+      final Directory ticketsDir = await getStorageDirectory();
+
+      // Generate a unique filename
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final filename = 'ticket_${completedTicket.id}_$timestamp.json';
+      final file = File('${ticketsDir.path}/$filename');
+
+      // Convert ticket to JSON and save
+      final ticketData = {
+        'ticket': completedTicket.toMap(),
+        'savedTimestamp': DateTime.now().millisecondsSinceEpoch,
+        'totalAmount': completedTicket.totalAmount,
+      };
+
+      final jsonString = jsonEncode(ticketData);
+      await file.writeAsString(jsonString);
+
+      print('✅ Ticket saved successfully at: ${file.path}');
+
+      // Verify file was created
+      final fileExists = await file.exists();
+      print('🔍 File verification: $fileExists');
+
+    } catch (e) {
+      print('❌ Error saving ticket locally: $e');
+    }
+  }
+
+  // Method to read all saved tickets (for verification)
+  // Future<void> readSavedTickets() async {
+  //   try {
+  //     final Directory? directory = await getSdCardDirectory();
+  //
+  //     if (directory == null) {
+  //       print('Could not access storage directory');
+  //       return;
+  //     }
+  //
+  //     final ticketsDir = Directory('${directory.path}/tickets');
+  //     if (await ticketsDir.exists()) {
+  //       final files = ticketsDir.listSync();
+  //       print('Found ${files.length} saved tickets:');
+  //
+  //       for (var file in files) {
+  //         if (file is File && file.path.endsWith('.json')) {
+  //           try {
+  //             final contents = await file.readAsString();
+  //             final jsonData = jsonDecode(contents);
+  //             print('File: ${file.path}');
+  //             print('Ticket ID: ${jsonData['ticket']['id']}');
+  //             print('Total Amount: ${jsonData['totalAmount']}');
+  //             print('Saved: ${DateTime.fromMillisecondsSinceEpoch(jsonData['savedTimestamp'])}');
+  //             print('---');
+  //           } catch (e) {
+  //             print('Error reading file ${file.path}: $e');
+  //           }
+  //         }
+  //       }
+  //     } else {
+  //       print('No tickets directory found');
+  //     }
+  //   } catch (e) {
+  //     print('Error reading saved tickets: $e');
+  //   }
+  // }
+
+  Future<void> readSavedTickets() async {
+    try {
+      final Directory ticketsDir = await getStorageDirectory();
+
+      if (await ticketsDir.exists()) {
+        final files = ticketsDir.listSync();
+        print('📂 Found ${files.length} saved tickets in: ${ticketsDir.path}');
+
+        for (var file in files) {
+          if (file is File && file.path.endsWith('.json')) {
+            try {
+              final contents = await file.readAsString();
+              final jsonData = jsonDecode(contents);
+              print('📄 File: ${file.uri.pathSegments.last}');
+              print('   Ticket ID: ${jsonData['ticket']['id']}');
+              print('   Total Amount: TK ${jsonData['totalAmount']?.toStringAsFixed(2)}');
+              print('   Saved: ${DateTime.fromMillisecondsSinceEpoch(jsonData['savedTimestamp'])}');
+              print('   ---');
+            } catch (e) {
+              print('   Error reading file: $e');
+            }
+          }
+        }
+      } else {
+        print('❌ No tickets directory found');
+      }
+    } catch (e) {
+      print('❌ Error reading saved tickets: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     String ticketName = ticket.name;
     return Consumer<TicketProvider>(
         builder: (context, ticketProvider, child) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(ticketName),
-        backgroundColor: Color(0xFF2E7D32),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(child: _buildTotalAmountSection()),
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(ticketName),
+              backgroundColor: Color(0xFF2E7D32),
+            ),
+            body: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(child: _buildTotalAmountSection()),
 
-            const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-            // Cash Received Section
-            Center(child: _buildCashReceivedSection()),
+                  // Cash Received Section
+                  Center(child: _buildCashReceivedSection()),
 
-            const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-            // Divider
-            const Divider(thickness: 2),
+                  // Divider
+                  const Divider(thickness: 2),
 
-            const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-            _buildPaymentMethodsSection(),
+                  _buildPaymentMethodsSection(),
 
-            const Spacer(),
+                  const Spacer(),
 
-            // Action Buttons
-            _buildActionButtons(context),
-            ElevatedButton(
-                onPressed: (){
-                  print(ticketProvider.tickets);
-                },
-                child: const Text("Check state of provider")),
-            ElevatedButton(
-                onPressed: (){
-                  if(ticketProvider.activeTicket?.totalAmount == null){
-                    print("total amount is null");
-                  }
-                  print(ticketProvider.activeTicket);
-                  print(ticketProvider.activeTicket?.totalAmount);
-                },
-                child: const Text("Print Active ticket"))
-          ],
-        ),
-      ),
-    );
-  });
+                  // Action Buttons
+                  _buildActionButtons(context),
+                  ElevatedButton(
+                      onPressed: (){
+                        print(ticketProvider.tickets);
+                      },
+                      child: const Text("Check state of provider")),
+                  ElevatedButton(
+                      onPressed: (){
+                        if(ticketProvider.activeTicket?.totalAmount == null){
+                          print("total amount is null");
+                        }
+                        print(ticketProvider.activeTicket);
+                        print(ticketProvider.activeTicket?.totalAmount);
+                      },
+                      child: const Text("Print Active ticket")),
+                  // Add a button to verify saved tickets
+                  ElevatedButton(
+                      onPressed: () async {
+                        await readSavedTickets();
+                      },
+                      child: const Text("Check Saved Tickets"))
+                ],
+              ),
+            ),
+          );
+        });
   }
 
   Widget _buildTotalAmountSection() {
@@ -255,16 +445,22 @@ class PaymentPage extends StatelessWidget {
     );
   }
 
-  void _processPayment(BuildContext context) {
+  void _processPayment(BuildContext context) async {
     final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
 
-    // Update the ticket with payment method before saving
+    // Update the ticket with payment method using your existing copyWith method
     final completedTicket = ticket.copyWith(
       paymentMethod: ticketProvider.selectedPaymentMethod,
     );
 
-    // Update the ticket in provider (this should already happen in setPaymentMethod)
+    // Update the ticket in provider
     ticketProvider.setPaymentMethod(ticketProvider.selectedPaymentMethod);
+
+    // MARK THE TICKET AS COMPLETED - Add this line
+    ticketProvider.completeActiveTicket();
+
+    // Save ticket locally
+    await saveTicketLocally(completedTicket);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -275,13 +471,26 @@ class PaymentPage extends StatelessWidget {
 
     Future.delayed(const Duration(seconds: 2), () {
       Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context){
-        return PrintPage(ticket: completedTicket);
+        return HomeScreen();
       },), (Route<dynamic> route) => false
       );
     });
   }
 
-  // void _processPayment(BuildContext context) {
+  // void _processPayment(BuildContext context) async {
+  //   final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
+  //
+  //   // Update the ticket with payment method using your existing copyWith method
+  //   final completedTicket = ticket.copyWith(
+  //     paymentMethod: ticketProvider.selectedPaymentMethod,
+  //   );
+  //
+  //   // Update the ticket in provider
+  //   ticketProvider.setPaymentMethod(ticketProvider.selectedPaymentMethod);
+  //
+  //   // Save ticket locally
+  //   await saveTicketLocally(completedTicket);
+  //
   //   ScaffoldMessenger.of(context).showSnackBar(
   //     SnackBar(
   //       content: Text('Payment of TK ${ticket.totalAmount.toStringAsFixed(2)} completed successfully!'),
@@ -290,9 +499,10 @@ class PaymentPage extends StatelessWidget {
   //   );
   //
   //   Future.delayed(const Duration(seconds: 2), () {
-  //     Navigator.push(context, MaterialPageRoute(builder: (context){
-  //       return PrintPage(ticket: ticket);
-  //     }));
+  //     Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context){
+  //       return PrintPage(ticket: completedTicket);
+  //     },), (Route<dynamic> route) => false
+  //     );
   //   });
   // }
 }

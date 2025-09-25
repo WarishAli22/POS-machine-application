@@ -1,3 +1,4 @@
+// widgets/tickets_drawer.dart
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -6,14 +7,12 @@ import '../providers/ticket_provider.dart';
 
 class TicketsDrawer extends StatelessWidget {
   TicketsDrawer({super.key});
+  // final ticketProvider = TicketProvider();
 
   @override
   Widget build(BuildContext context) {
     return Consumer<TicketProvider>(
       builder: (context, ticketProvider, child) {
-        // FILTER OUT COMPLETED TICKETS - Add this line
-        final activeTickets = ticketProvider.tickets.where((ticket) => !ticket.isCompleted).toList();
-
         print(ticketProvider.tickets);
         return Column(
           children: [
@@ -30,7 +29,7 @@ class TicketsDrawer extends StatelessWidget {
                     onPressed: () => Navigator.pop(context),
                   ),
                   const Text(
-                    'Active Tickets', // Changed from 'Tickets' to 'Active Tickets'
+                    'Tickets',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 24,
@@ -41,11 +40,12 @@ class TicketsDrawer extends StatelessWidget {
               ),
             ),
 
+            // Rest of the TicketsDrawer content remains the same
             Expanded(
               child: ListView.builder(
-                itemCount: activeTickets.length, // Use filtered list
+                itemCount: ticketProvider.tickets.length,
                 itemBuilder: (context, index) {
-                  final ticket = activeTickets[index];
+                  final ticket = ticketProvider.tickets[index];
                   final isActive = ticketProvider.activeTicket?.id == ticket.id;
 
                   return ListTile(
@@ -54,7 +54,7 @@ class TicketsDrawer extends StatelessWidget {
                       color: isActive ? Theme.of(context).primaryColor : Colors.grey,
                     ),
                     title: Text(ticket.name),
-                    trailing: activeTickets.length > 1 // Use filtered list length
+                    trailing: ticketProvider.tickets.length > 1
                         ? IconButton(
                       icon: const Icon(Icons.delete, size: 20),
                       onPressed: () {
@@ -115,3 +115,4 @@ class TicketsDrawer extends StatelessWidget {
     );
   }
 }
+

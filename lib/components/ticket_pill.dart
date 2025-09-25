@@ -6,8 +6,9 @@ import '../providers/ticket_provider.dart';
 import 'package:my_pos/models/ticket_model.dart';
 
 class TicketPill extends StatelessWidget {
+  final String ticketname;
   final int ticketnum;
-  const TicketPill({required this.ticketnum});
+  const TicketPill({this.ticketname = "nai", required this.ticketnum});
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -20,7 +21,7 @@ class TicketPill extends StatelessWidget {
         ),
         child: Consumer<TicketProvider>(
           builder:(context, ticketProvider, child){
-            if(ticketnum==-1){
+            if(ticketnum==-1 || ticketname == "nai"){
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -35,18 +36,18 @@ class TicketPill extends StatelessWidget {
               children: [
                 const Icon(Icons.confirmation_number, color: Colors.white, size: 18),
                 const SizedBox(width: 6),
-                const Text('Ticket', style: TextStyle(color: Colors.white)),
+                Text(ticketname, style: TextStyle(color: Colors.white)),
                 const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text('$ticketnum',
-                      style: const TextStyle(
-                          color: Colors.black87, fontWeight: FontWeight.w600)),
-                ),
+                // Container(
+                //   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                //   decoration: BoxDecoration(
+                //     color: Colors.white,
+                //     borderRadius: BorderRadius.circular(12),
+                //   ),
+                //   child: Text('$ticketnum',
+                //       style: const TextStyle(
+                //           color: Colors.black87, fontWeight: FontWeight.w600)),
+                // ),
               ],
             );
           }

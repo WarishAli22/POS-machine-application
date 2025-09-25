@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_pos/pages/receipts_page.dart';
+import 'package:my_pos/pages/sales_page.dart';
 
 class MainNavDrawer extends StatelessWidget {
   const MainNavDrawer({super.key});
@@ -40,7 +41,15 @@ class MainNavDrawer extends StatelessWidget {
             _DrawerTile(
               icon: Icons.sell_outlined,
               label: 'Sales',
-              onTap: () => Navigator.pop(context),
+
+              onTap: (){
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context){
+                      return TotalSalesPage();
+                    })
+                );
+              }
             ),
             _DrawerTile(
               icon: Icons.receipt_long,

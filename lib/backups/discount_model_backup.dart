@@ -21,22 +21,4 @@ class Discount {
       amount: amount ?? this.amount,
     );
   }
-
-  // Convert Discount to Map
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'percentage': percentage,
-      'amount': amount,
-    };
-  }
-
-  // Create Discount from Map
-  static Discount fromMap(Map<String, dynamic> map) {
-    return Discount(
-      id: map['id'] ?? '',
-      percentage: (map['percentage'] as num).toInt(),
-      amount: (map['amount'] as num).toDouble(),
-    );
-  }
 }

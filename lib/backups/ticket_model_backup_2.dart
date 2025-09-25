@@ -1,6 +1,7 @@
 import 'package:my_pos/models/food_model.dart';
 import 'package:my_pos/models/discount_model.dart';
 
+// models/ticket.dart
 class Ticket {
   final String id;
   final String name;
@@ -8,12 +9,10 @@ class Ticket {
   final DateTime createdAt;
   final String paymentMethod;
   final List<Discount> discounts;
-  final bool isCompleted; // Add this
-  final DateTime? completedAt; // Add this
 
   @override
   String toString() {
-    return 'Ticket(name: $name, id: $id, items: ${items.length}, totalItems: ${items.fold(0, (sum, item) => sum + item.quantity)}, createdAt: $createdAt, paymentMethod: $paymentMethod, isCompleted: $isCompleted)';
+    return 'Ticket(name: $name, id: $id, items: ${items.length}, totalItems: ${items.fold(0, (sum, item) => sum + item.quantity)}, createdAt: $createdAt, paymentMethod: $paymentMethod)';
   }
 
   Ticket({
@@ -23,12 +22,7 @@ class Ticket {
     required this.paymentMethod,
     DateTime? createdAt,
     List<Discount>? discounts,
-    bool? isCompleted, // Add this parameter
-    DateTime? completedAt, // Add this parameter
-  }) : createdAt = createdAt ?? DateTime.now(),
-        discounts = discounts ?? [],
-        isCompleted = isCompleted ?? false, // Default to false
-        completedAt = completedAt;
+  }) : createdAt = createdAt ?? DateTime.now(), discounts = discounts ?? [];
 
   double get totalAmount {
     final subtotal = items.fold(0.0, (sum, item) => sum + (item.price * item.quantity));
@@ -43,8 +37,6 @@ class Ticket {
     DateTime? createdAt,
     String? paymentMethod,
     List<Discount>? discounts,
-    bool? isCompleted, // Add this
-    DateTime? completedAt, // Add this
   }) {
     return Ticket(
       id: id ?? this.id,
@@ -53,12 +45,10 @@ class Ticket {
       paymentMethod: paymentMethod ?? this.paymentMethod,
       createdAt: createdAt ?? this.createdAt,
       discounts: discounts ?? this.discounts,
-      isCompleted: isCompleted ?? this.isCompleted, // Include in copyWith
-      completedAt: completedAt ?? this.completedAt, // Include in copyWith
     );
   }
 
-  // Convert Ticket to Map - UPDATED VERSION
+  // Convert Ticket to Map
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -66,13 +56,11 @@ class Ticket {
       'items': items.map((item) => item.toMap()).toList(),
       'createdAt': createdAt.millisecondsSinceEpoch,
       'paymentMethod': paymentMethod,
-      'discounts': discounts.map((discount) => discount.toMap()).toList(),
-      'isCompleted': isCompleted, // Add this
-      'completedAt': completedAt?.millisecondsSinceEpoch, // Add this
+      'discounts': discounts.map((discount) => discount.toMap()).toList(), // Add discounts
     };
   }
 
-  // Create Ticket from Map - UPDATED VERSION
+  // Create Ticket from Map - FIXED VERSION
   static Ticket fromMap(Map<String, dynamic> map) {
     return Ticket(
       id: map['id'] ?? '',
@@ -90,11 +78,7 @@ class Ticket {
               (discount) => Discount.fromMap(discount as Map<String, dynamic>),
         ),
       )
-          : [],
-      isCompleted: map['isCompleted'] ?? false, // Add this
-      completedAt: map['completedAt'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['completedAt'])
-          : null, // Add this
+          : [], // Handle discounts
     );
   }
 

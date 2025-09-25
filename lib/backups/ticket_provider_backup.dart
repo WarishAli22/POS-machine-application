@@ -2,87 +2,20 @@ import '../models/food_model.dart';
 import 'package:flutter/foundation.dart';
 import '../models/ticket_model.dart';
 import 'package:my_pos/models/discount_model.dart';
-import '../services/ticket_storage_service.dart'; // Add this import
 
 class TicketProvider with ChangeNotifier {
   List<Ticket> _tickets = [];
   Ticket? _activeTicket;
   String _selectedPaymentMethod = 'CASH';
-  final TicketStorageService _storageService = TicketStorageService(); // Add this
 
   List<Ticket> get tickets => _tickets;
   Ticket? get activeTicket => _activeTicket;
   double get currentTotalAmount => _activeTicket?.totalAmount ?? 0.0;
   String get selectedPaymentMethod => _selectedPaymentMethod;
 
-  // Initialize with persistent storage
-  // TicketProvider() {
-  //   _loadTickets().then((_) {
-  //     // After loading tickets, create new ticket if none exist
-  //     if (_tickets.isEmpty) {
-  //       _createNewTicket();
-  //     } else {
-  //       // Set the last ticket as active
-  //       _activeTicket = _tickets.last;
-  //       _selectedPaymentMethod = _activeTicket?.paymentMethod ?? 'CASH';
-  //     }
-  //     notifyListeners();
-  //   });
-  // }
-
-  // Load tickets from persistent storage
-  int _totalTicketsCreated = 0;
+  // Initialize with a default ticket
   TicketProvider() {
-    _loadTickets().then((_) {
-      // Calculate the highest ticket number from existing tickets
-      _calculateTotalTicketsCreated();
-
-      final activeTickets = _tickets.where((ticket) => !ticket.isCompleted).toList();
-
-      if (activeTickets.isEmpty) {
-        _createNewTicket();
-      } else {
-        _activeTicket = activeTickets.last;
-        _selectedPaymentMethod = _activeTicket?.paymentMethod ?? 'CASH';
-      }
-      notifyListeners();
-    });
-  }
-
-  // TicketProvider() {
-  //   _loadTickets().then((_) {
-  //     // Filter out completed tickets for active use
-  //     final activeTickets = _tickets.where((ticket) => !ticket.isCompleted).toList();
-  //
-  //     if (activeTickets.isEmpty) {
-  //       _createNewTicket();
-  //     } else {
-  //       // Set the last active ticket as active
-  //       _activeTicket = activeTickets.last;
-  //       _selectedPaymentMethod = _activeTicket?.paymentMethod ?? 'CASH';
-  //     }
-  //     notifyListeners();
-  //   });
-  // }
-
-
-  Future<void> _loadTickets() async {
-    try {
-      _tickets = await _storageService.loadTickets();
-      print('✅ Loaded ${_tickets.length} tickets from persistent storage');
-    } catch (e) {
-      print('❌ Error loading tickets: $e');
-      _tickets = [];
-    }
-  }
-
-  // Save tickets to persistent storage
-  Future<void> _saveTickets() async {
-    try {
-      await _storageService.saveTickets(_tickets);
-    } catch (e) {
-      print('❌ Error saving tickets: $e');
-    }
+    _createNewTicket();
   }
 
   void setPaymentMethod(String method) {
@@ -92,11 +25,10 @@ class TicketProvider with ChangeNotifier {
     if (_activeTicket != null) {
       _activeTicket = _activeTicket!.copyWith(paymentMethod: method);
 
-      // Also update the ticket in the tickets list
+      // Also update th e ticket in the tickets list
       final index = _tickets.indexWhere((t) => t.id == _activeTicket!.id);
       if (index != -1) {
         _tickets[index] = _activeTicket!;
-        _saveTickets(); // Persist changes
       }
     }
 
@@ -107,30 +39,8 @@ class TicketProvider with ChangeNotifier {
     if (_activeTicket != null) {
       _activeTicket = _activeTicket!.copyWith(paymentMethod: method);
       _selectedPaymentMethod = method;
-
-      final index = _tickets.indexWhere((t) => t.id == _activeTicket!.id);
-      if (index != -1) {
-        _tickets[index] = _activeTicket!;
-        _saveTickets(); // Persist changes
-      }
-
       notifyListeners();
     }
-  }
-
-  void _calculateTotalTicketsCreated() {
-    int maxNumber = 0;
-    for (final ticket in _tickets) {
-      // Extract number from ticket name (e.g., "Ticket 4" -> 4)
-      final match = RegExp(r'Ticket (\d+)').firstMatch(ticket.name);
-      if (match != null) {
-        final number = int.tryParse(match.group(1) ?? '0') ?? 0;
-        if (number > maxNumber) {
-          maxNumber = number;
-        }
-      }
-    }
-    _totalTicketsCreated = maxNumber;
   }
 
   void setTicket(Ticket ticket) {
@@ -139,9 +49,11 @@ class TicketProvider with ChangeNotifier {
     notifyListeners();
   }
 
+
   //Active Ticket Index
   int getActiveTicketIndex() {
     if (_activeTicket == null) return -1;
+
     return _tickets.indexWhere((ticket) => ticket.id == _activeTicket!.id)+1;
   }
 
@@ -156,11 +68,9 @@ class TicketProvider with ChangeNotifier {
 
   // Create a new ticket
   void createNewTicket([String? name]) {
-    _totalTicketsCreated++;
     final newTicket = _createNewTicket();
     _tickets.add(newTicket);
     _activeTicket = newTicket;
-    _saveTickets();
     notifyListeners();
   }
 
@@ -168,10 +78,12 @@ class TicketProvider with ChangeNotifier {
     print("new ticket creating...");
     final newTicket = Ticket(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: 'Ticket ${_totalTicketsCreated + 1}', // Use continuous counter
+      name: 'Ticket ${_tickets.length + 1}',
       items: [],
       paymentMethod: '',
     );
+    // _tickets.add(newTicket);
+    // notifyListeners();
     return newTicket;
   }
 
@@ -204,7 +116,6 @@ class TicketProvider with ChangeNotifier {
     final updatedTicket = _activeTicket!.copyWith(items: updatedItems);
     _tickets[ticketIndex] = updatedTicket;
     _activeTicket = updatedTicket;
-    _saveTickets(); // Persist changes
 
     notifyListeners();
   }
@@ -221,7 +132,6 @@ class TicketProvider with ChangeNotifier {
     final updatedTicket = _activeTicket!.copyWith(items: updatedItems);
     _tickets[ticketIndex] = updatedTicket;
     _activeTicket = updatedTicket;
-    _saveTickets(); // Persist changes
 
     notifyListeners();
   }
@@ -238,10 +148,10 @@ class TicketProvider with ChangeNotifier {
         _activeTicket = updatedTicket;
       }
 
-      _saveTickets(); // Persist changes
       notifyListeners();
     }
   }
+
 
   int getItemQuantity(String itemId) {
     if (_activeTicket != null) {
@@ -259,7 +169,6 @@ class TicketProvider with ChangeNotifier {
     }
     return 0;
   }
-
   void removeItemFromActiveTicket(String itemId) {
     if (_activeTicket != null) {
       final index = _tickets.indexWhere((t) => t.id == _activeTicket!.id);
@@ -268,7 +177,6 @@ class TicketProvider with ChangeNotifier {
 
         _tickets[index] = _activeTicket!.copyWith(items: updatedItems);
         _activeTicket = _tickets[index];
-        _saveTickets(); // Persist changes
         notifyListeners();
       }
     }
@@ -293,7 +201,6 @@ class TicketProvider with ChangeNotifier {
 
             _tickets[index] = _activeTicket!.copyWith(items: updatedItems);
             _activeTicket = _tickets[index];
-            _saveTickets(); // Persist changes
             notifyListeners();
           }
         }
@@ -301,44 +208,16 @@ class TicketProvider with ChangeNotifier {
     }
   }
 
-  void completeActiveTicket() {
-    if (_activeTicket == null) return;
-
-    final ticketIndex = _tickets.indexWhere((t) => t.id == _activeTicket!.id);
-    if (ticketIndex == -1) return;
-
-    // Mark the ticket as completed
-    final completedTicket = _activeTicket!.copyWith(
-      isCompleted: true,
-      completedAt: DateTime.now(),
-    );
-
-    // Update the ticket in the list
-    _tickets[ticketIndex] = completedTicket;
-
-    // Create a new active ticket
-    createNewTicket();
-
-    _saveTickets(); // Persist changes
-    notifyListeners();
+  List<Ticket> get completedTickets {
+    return _tickets.where((ticket) =>
+    ticket.items.isNotEmpty &&
+        ticket.paymentMethod.isNotEmpty &&
+        ticket.paymentMethod != '').toList();
   }
-
-  // List<Ticket> get completedTickets {
-  //   return _tickets.where((ticket) =>
-  //   ticket.items.isNotEmpty &&
-  //       ticket.paymentMethod.isNotEmpty &&
-  //       ticket.paymentMethod != '').toList();
-  // }
 
   // Delete a ticket
-  List<Ticket> get completedTickets {
-    return _tickets.where((ticket) => ticket.isCompleted).toList();
-  }
-
-
   void deleteTicket(String ticketId) {
     _tickets.removeWhere((ticket) => ticket.id == ticketId);
-    _saveTickets(); // Persist changes
 
     // If we deleted the active ticket, select the first one or create new
     if (_activeTicket?.id == ticketId) {
@@ -381,7 +260,6 @@ class TicketProvider with ChangeNotifier {
     final updatedTicket = _activeTicket!.copyWith(discounts: updatedDiscounts);
     _tickets[ticketIndex] = updatedTicket;
     _activeTicket = updatedTicket;
-    _saveTickets(); // Persist changes
 
     notifyListeners();
   }
@@ -400,7 +278,6 @@ class TicketProvider with ChangeNotifier {
     final updatedTicket = _activeTicket!.copyWith(discounts: updatedDiscounts);
     _tickets[ticketIndex] = updatedTicket;
     _activeTicket = updatedTicket;
-    _saveTickets(); // Persist changes
 
     notifyListeners();
   }
@@ -416,7 +293,6 @@ class TicketProvider with ChangeNotifier {
     final updatedTicket = _activeTicket!.copyWith(discounts: []);
     _tickets[ticketIndex] = updatedTicket;
     _activeTicket = updatedTicket;
-    _saveTickets(); // Persist changes
 
     notifyListeners();
   }
@@ -424,17 +300,19 @@ class TicketProvider with ChangeNotifier {
   // Get total discount amount for the active ticket
   double getDiscountTotal() {
     if (_activeTicket == null) return 0.0;
+
     return _activeTicket!.discounts.fold(0.0, (sum, discount) => sum + discount.amount);
   }
 
   // Get subtotal (before discounts) for the active ticket
   double getSubtotal() {
     if (_activeTicket == null) return 0.0;
+
     return _activeTicket!.items.fold(0.0, (sum, item) => sum + (item.price * item.quantity));
   }
 
   //-----------------------------//
-  // Rename the active ticket
+// Rename the active ticket
   void renameActiveTicket(String newName) {
     if (_activeTicket == null) return;
     final idx = _tickets.indexWhere((t) => t.id == _activeTicket!.id);
@@ -443,11 +321,10 @@ class TicketProvider with ChangeNotifier {
     final updated = _activeTicket!.copyWith(name: newName);
     _tickets[idx] = updated;
     _activeTicket = updated;
-    _saveTickets(); // Persist changes
     notifyListeners();
   }
 
-  // Replace payment method for active ticket (ensures list copy stays consistent)
+// Replace payment method for active ticket (ensures list copy stays consistent)
   void setActiveTicketPaymentMethod(String method) {
     if (_activeTicket == null) return;
     final idx = _tickets.indexWhere((t) => t.id == _activeTicket!.id);
@@ -457,23 +334,6 @@ class TicketProvider with ChangeNotifier {
     _tickets[idx] = updated;
     _activeTicket = updated;
     _selectedPaymentMethod = method;
-    _saveTickets(); // Persist changes
-    notifyListeners();
-  }
-
-  // Add a method to manually save tickets (for debugging)
-  Future<void> manualSave() async {
-    await _saveTickets();
-    print('✅ Manual save completed. ${_tickets.length} tickets saved.');
-  }
-
-  // Add a method to clear all tickets (for testing)
-  void clearAllTickets() {
-    _tickets.clear();
-    _activeTicket = null;
-    _selectedPaymentMethod = 'CASH';
-    _saveTickets(); // Persist the empty state
-    createNewTicket(); // Create a new empty ticket
     notifyListeners();
   }
 }
